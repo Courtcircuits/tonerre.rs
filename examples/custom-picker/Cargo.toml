@@ -1,0 +1,10 @@
+[package]
+name = "custom-picker"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tonerre = { path = "../../tonerre", features = ["json_extractor"] }
+futures = "0.3.31"
+rdkafka = { version = "0.25", features = ["dynamic-linking"] }
+tokio = { version = "1.46.1", features = ["full", "macros", "rt-multi-thread"] }

@@ -1,0 +1,23 @@
+[package]
+name = "tonerre"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "Ergonomic and modular Kafka framework made for Rust built with Rust-Rdkafka and Tokio ⚡"
+repository = "https://github.com/Courtcircuits/tonerre.rs"
+homepage = "https://github.com/Courtcircuits/tonerre.rs"
+readme = { file = "README.md", workspace = true }
+keywords = ["kafka", "asynchronous", "scale", "cloud", "cool"]
+categories = ["web-programming", "development-tools"]
+
+[dependencies]
+futures = "0.3.31"
+rdkafka = { version = "0.25", features = ["dynamic-linking"] }
+serde = { version = "1.0.219", features = ["serde_derive"] }
+serde_json = {version = "1.0.141", optional = true }
+serde_path_to_error = { version = "0.1.17", optional = true }
+tokio = { version = "1.46.1", features = ["full", "macros", "rt-multi-thread"] }
+
+[features]
+default=[]
+json_extractor=["dep:serde_json", "dep:serde_path_to_error"]

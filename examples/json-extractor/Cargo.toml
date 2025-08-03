@@ -1,0 +1,13 @@
+[package]
+name = "json-extractor"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tonerre = { path = "../../tonerre", features = ["json_extractor"] }
+futures = "0.3.31"
+rdkafka = { version = "0.25", features = ["dynamic-linking"] }
+serde = { version = "1.0.219", features = ["serde_derive"] }
+serde_json = { version = "1.0.141", optional = true }
+serde_path_to_error = { version = "0.1.17", optional = true }
+tokio = { version = "1.46.1", features = ["full", "macros", "rt-multi-thread"] }
