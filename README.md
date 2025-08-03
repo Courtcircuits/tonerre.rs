@@ -4,9 +4,9 @@
 </div>
 </br>
 
-<b>⚠️ This project is still expiremental and should not used for data-intesive productions (yet).</b>
+<b>⚠️ This project is still expiremental and should not be used in data-intesive productions (yet).</b>
 
-If you're like me, you must have often struggled building clean kafka clients in Rust and you really wish there was a library with a DX similar to [Axum](https://github.com/tokio-rs/axum) that provides a modula way to build Kafka consumers on top of [Rust-Rdkafka](https://github.com/fede1024/rust-rdkafka). Something that handles without too much boilerplate message deserialization, handler matching based on the message type, message picking logic... That's what Tonerre aims to help you with.
+If you're like me, you've probably often struggled to build clean Kafka clients in Rust. You might wish there was a library with a developer experience similar to [Axum](https://github.com/tokio-rs/axum) that provides a modular way to build Kafka consumers on top of [Rust-Rdkafka](https://github.com/fede1024/rust-rdkafka). Something that handles message deserialization, handler matching based on the message type, message picking logic without too much boilerplate. That's what Tonerre aims to help you with.
 
 ## High level features 
 
@@ -22,7 +22,7 @@ If you're like me, you must have often struggled building clean kafka clients in
 - [ ] Build a helper for building your producer easily.
 - [ ] Adding support for various asynchronous runtimes
 
-Please send me an email at radulescutristan@proton.me with the topic "[tonerre] Hi mihai ...", or just open an issue if you need any other feature non-listed above.
+Please send me an email at radulescutristan@proton.me with the subject "[tonerre] Hi mihai ...", or just open an issue if you need any other feature not listed above.
 
 ## Usage example
 
