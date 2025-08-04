@@ -1,0 +1,151 @@
+name: Auto Release on Version Change
+run-name: ${{ github.actor }} triggered auto-release workflow 🚀
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tonerre/Cargo.toml'
+
+jobs:
+  check-version-change:
+    runs-on: ubuntu-latest
+    outputs:
+      version-changed: ${{ steps.check.outputs.version-changed }}
+      new-version: ${{ steps.check.outputs.new-version }}
+      old-version: ${{ steps.check.outputs.old-version }}
+    
+    steps:
+    - name: Checkout current commit
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 2  # Fetch current and previous commit
+        
+    - name: Check if version changed
+      id: check
+      run: |
+        # Get the current version from Cargo.toml
+        CURRENT_VERSION=$(grep '^version = ' tonerre/Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+        echo "Current version: $CURRENT_VERSION"
+        
+        # Get the previous version from the parent commit
+        git checkout HEAD~1 -- tonerre/Cargo.toml 2>/dev/null || {
+          echo "No previous commit found, treating as initial version"
+          echo "version-changed=true" >> $GITHUB_OUTPUT
+          echo "new-version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "old-version=none" >> $GITHUB_OUTPUT
+          git checkout HEAD -- tonerre/Cargo.toml
+          exit 0
+        }
+        
+        PREVIOUS_VERSION=$(grep '^version = ' tonerre/Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+        echo "Previous version: $PREVIOUS_VERSION"
+        
+        # Restore current version
+        git checkout HEAD -- tonerre/Cargo.toml
+        
+        # Check if version changed
+        if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
+          echo "✅ Version changed from $PREVIOUS_VERSION to $CURRENT_VERSION"
+          echo "version-changed=true" >> $GITHUB_OUTPUT
+          echo "new-version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "old-version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
+        else
+          echo "ℹ️ Version unchanged ($CURRENT_VERSION)"
+          echo "version-changed=false" >> $GITHUB_OUTPUT
+        fi
+
+  create-release:
+    needs: check-version-change
+    if: needs.check-version-change.outputs.version-changed == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+        
+    - name: Run tests before release
+      run: |
+        cd tonerre
+        cargo test --all-features
+        
+    - name: Build release
+      run: |
+        cd tonerre
+        cargo build --release
+        
+    - name: Generate changelog entry
+      id: changelog
+      run: |
+        VERSION="${{ needs.check-version-change.outputs.new-version }}"
+        OLD_VERSION="${{ needs.check-version-change.outputs.old-version }}"
+        
+        # Create a basic changelog entry
+        if [ "$OLD_VERSION" = "none" ]; then
+          CHANGELOG="🎉 Initial release of tonerre v$VERSION"
+        else
+          CHANGELOG="🚀 Release v$VERSION (upgraded from v$OLD_VERSION)"
+        fi
+        
+        # Try to extract recent commits as changelog items
+        echo "## What's Changed" > /tmp/changelog.md
+        echo "" >> /tmp/changelog.md
+        
+        # Get commits since last version tag (if it exists)
+        if git tag | grep -q "v$OLD_VERSION" 2>/dev/null; then
+          echo "### Commits since v$OLD_VERSION:" >> /tmp/changelog.md
+          git log --oneline "v$OLD_VERSION"..HEAD --pretty=format:"- %s (%h)" >> /tmp/changelog.md
+        else
+          echo "### Recent commits:" >> /tmp/changelog.md
+          git log --oneline -10 --pretty=format:"- %s (%h)" >> /tmp/changelog.md
+        fi
+        
+        echo "" >> /tmp/changelog.md
+        echo "---" >> /tmp/changelog.md
+        echo "*This release was automatically created when the version in Cargo.toml was updated.*" >> /tmp/changelog.md
+        
+        # Set output for use in release creation
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        cat /tmp/changelog.md >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ needs.check-version-change.outputs.new-version }}
+        release_name: Release v${{ needs.check-version-change.outputs.new-version }}
+        body: ${{ steps.changelog.outputs.changelog }}
+        draft: false
+        prerelease: false
+        
+    - name: Create workflow summary
+      run: |
+        echo "## 🎉 Auto-Release Created!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Version:** v${{ needs.check-version-change.outputs.new-version }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Previous Version:** ${{ needs.check-version-change.outputs.old-version }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "The release will trigger the publish workflow automatically." >> $GITHUB_STEP_SUMMARY
+
+  notify-no-change:
+    needs: check-version-change
+    if: needs.check-version-change.outputs.version-changed == 'false'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: No release needed
+      run: |
+        echo "## ℹ️ No Release Created" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "The version in tonerre/Cargo.toml was not changed in this push." >> $GITHUB_STEP_SUMMARY
+        echo "Current version remains: ${{ needs.check-version-change.outputs.new-version }}" >> $GITHUB_STEP_SUMMARY

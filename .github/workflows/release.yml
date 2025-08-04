@@ -1,0 +1,86 @@
+name: Publish crate
+run-name: ${{ github.actor }} is publishing a new version for the crate 🌪️
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Extract version from release tag
+      id: extract_version
+      run: |
+        TAG_NAME="${{ github.ref_name }}"
+        echo "Release tag: $TAG_NAME"
+        
+        VERSION=${TAG_NAME#v}
+        echo "Extracted version: $VERSION"
+        
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+    
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+        
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        
+    - name: Verify version matches Cargo.toml
+      run: |
+        cd tonerre
+        CARGO_VERSION=$(grep '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+        RELEASE_VERSION="${{ steps.extract_version.outputs.version }}"
+        
+        echo "Cargo.toml version: $CARGO_VERSION"
+        echo "Release version: $RELEASE_VERSION"
+        
+        if [ "$CARGO_VERSION" != "$RELEASE_VERSION" ]; then
+          echo "❌ Version mismatch!"
+          echo "Cargo.toml version ($CARGO_VERSION) does not match release version ($RELEASE_VERSION)"
+          exit 1
+        else
+          echo "✅ Versions match!"
+        fi
+    
+    - name: Run tests
+      run: |
+        cd tonerre
+        cargo test --all-features
+        
+    - name: Build release
+      run: |
+        cd tonerre
+        cargo build --release
+        
+    - name: Publish to crates.io
+      run: |
+        cd tonerre
+        cargo publish --token ${{ secrets.CARGO_TOKEN }}
+      env:
+        CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_TOKEN }}
+        
+    - name: Create deployment summary
+      run: |
+        echo "## 🚀 Crate Published Successfully!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Crate:** tonerre" >> $GITHUB_STEP_SUMMARY
+        echo "**Version:** ${{ steps.extract_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Release Tag:** ${{ steps.extract_version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Published by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "The crate is now available on [crates.io](https://crates.io/crates/tonerre)" >> $GITHUB_STEP_SUMMARY
