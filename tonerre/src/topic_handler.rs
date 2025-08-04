@@ -47,9 +47,8 @@ where
 {
     Arc::new(move |message: OwnedMessage| {
         Box::pin(async move {
-            match T::from_request(message).await {
-                Ok(data) => f(data),
-                Err(_) => {}
+            if let Ok(data) = T::from_request(message).await {
+                f(data)
             }
         })
     })

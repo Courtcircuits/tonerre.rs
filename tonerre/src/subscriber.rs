@@ -11,6 +11,12 @@ pub struct InnerSubscriber {
     handlers: Arc<HashMap<String, TopicHandler>>,
 }
 
+impl Default for Subscriber {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct Subscriber {
     handlers: HashMap<String, TopicHandler>,
 }
@@ -70,10 +76,7 @@ impl InnerSubscriber {
             handles.push(handle);
         }
 
-        match try_join_all(handles).await {
-            Ok(_) => {}
-            Err(_) => {}
-        }
+        let _ = (try_join_all(handles).await).is_ok();
         Ok(())
     }
 }
