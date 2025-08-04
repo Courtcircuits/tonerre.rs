@@ -11,11 +11,11 @@ use rdkafka::{consumer::Consumer as RDKafkaConsumer, consumer::StreamConsumer};
 
 use crate::extract::FromMessage;
 
-pub type SharedHandler =
-    Arc<dyn Fn(OwnedMessage) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + Sync>;
+pub type SharedHandler<S> =
+    Arc<dyn Fn(OwnedMessage, S) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + Sync>;
 
 pub type BoxedNext = Arc<
-    dyn Fn(OwnedMessage, Vec<SharedHandler>) -> Pin<Box<dyn Future<Output = ()> + Send>>
+    dyn Fn(OwnedMessage) -> Pin<Box<dyn Future<Output = ()> + Send>>
         + Send
         + Sync
         + 'static,
@@ -26,8 +26,7 @@ pub type SharedPicker = Arc<Picker>;
 pub type Picker = Box<
     dyn for<'a> Fn(
             MessageStream<'a, DefaultConsumerContext>,
-            BoxedNext,
-            Vec<SharedHandler>,
+            BoxedNext
         ) -> Pin<
             Box<dyn Future<Output = Result<(), rdkafka::error::KafkaError>> + Send + 'a>,
         > + Send
@@ -37,19 +36,20 @@ pub type Picker = Box<
 #[macro_export]
 macro_rules! picker {
     ($fn:expr) => {
-        Box::new(move |stream, next, handlers| Box::pin($fn(stream, next, handlers)))
+        Box::new(move |stream, next| Box::pin($fn(stream, next)))
     };
 }
 
-pub fn handler<F, T>(f: F) -> SharedHandler
+pub fn handler<F, T, S>(f: F) -> SharedHandler<S>
 where
     T: FromMessage + Send + 'static,
-    F: Fn(T) + Send + Sync + Copy + 'static,
+    S: Send + Sync + Clone + 'static,
+    F: Fn(T, S) + Send + Sync + Copy + 'static,
 {
-    Arc::new(move |message: OwnedMessage| {
+    Arc::new(move |message: OwnedMessage, state: S| {
         Box::pin(async move {
             match T::from_request(message).await {
-                Ok(data) => f(data),
+                Ok(data) => f(data, state),
                 Err(_) => {
                 }
             }
@@ -58,13 +58,19 @@ where
 }
 
 #[derive(Clone)]
-pub struct TopicHandler {
-    handlers: Vec<SharedHandler>,
+pub struct TopicHandler<S>
+where 
+    S: Send + Sync + Clone + 'static
+{
+    handlers: Vec<SharedHandler<S>>,
     picker: Option<SharedPicker>,
 }
 
-impl TopicHandler {
-    pub fn new(handlers: Vec<SharedHandler>, picker: Option<SharedPicker>) -> Self {
+impl<S> TopicHandler<S>
+where
+    S: Send + Sync + Clone + 'static
+{
+    pub fn new(handlers: Vec<SharedHandler<S>>, picker: Option<SharedPicker>) -> Self {
         Self { handlers, picker }
     }
 
@@ -72,25 +78,29 @@ impl TopicHandler {
         &self,
         consumer: &StreamConsumer,
         topic: String,
+        state: S
     ) -> Result<(), rdkafka::error::KafkaError> {
         consumer.subscribe(&[topic.as_str()]).unwrap();
 
         let stream = consumer.stream();
 
-        let handler: BoxedNext = Arc::new(|message: OwnedMessage, handlers: Vec<SharedHandler>| {
+        let handlers = self.handlers.clone();
+        let handler: BoxedNext = Arc::new(move |message: OwnedMessage| {
+            let handlers = handlers.clone();
+            let state = state.clone();
             Box::pin(async move {
                 for handler in handlers.clone() {
                     // will be working on a zero copy version of this code later.
-                    handler(message.clone()).await
+                    handler(message.clone(), state.clone()).await
                 }
             })
         });
 
         match self.picker.clone() {
-            Some(picker) => picker(stream, handler, self.handlers.clone())
+            Some(picker) => picker(stream, handler)
                 .await
                 .unwrap(),
-            None => default_handler(stream, handler, self.handlers.clone())
+            None => default_handler(stream, handler)
                 .await
                 .unwrap(),
         }
@@ -101,11 +111,10 @@ impl TopicHandler {
 async fn default_handler(
     mut stream: MessageStream<'_, DefaultConsumerContext>,
     next: BoxedNext,
-    handlers: Vec<SharedHandler>,
 ) -> Result<(), rdkafka::error::KafkaError> {
     while let Some(message) = stream.next().await {
         let message = message?;
-        next(BorrowedMessage::detach(&message), handlers.clone()).await;
+        next(BorrowedMessage::detach(&message)).await;
     }
     Ok(())
 }

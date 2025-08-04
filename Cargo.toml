@@ -1,5 +1,5 @@
 [workspace]
 
-members = ["examples/basic", "examples/custom-picker", "examples/json-extractor", "tonerre"]
+members = ["examples/basic", "examples/custom-picker", "examples/json-extractor", "examples/state", "tonerre"]
 default-members = ["tonerre"]
 resolver = "2"

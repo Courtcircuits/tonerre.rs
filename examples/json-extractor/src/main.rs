@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use rdkafka::ClientConfig;
 use serde::Deserialize;
 use tonerre::{extract::Json, subscriber::Subscriber, topic_handler::handler};
@@ -13,7 +15,11 @@ struct Bike {
     color: String,
 }
 
-fn handler_1(Json(message): Json<User>) {
+struct State{
+
+}
+
+fn handler_1(Json(message): Json<User>, _state: ()) {
     println!("handler_1: {}", message.name);
 }
 
@@ -25,8 +31,8 @@ fn handler_2(Json(message): Json<Bike>) {
 
 #[tokio::main]
 async fn main() {
-    let subscriber = Subscriber::new()
-        .subscribe("topic1", vec![handler(handler_1), handler(handler_2)])
+    let subscriber = Subscriber::new(())
+        .subscribe("topic1", vec![handler(handler_1)])
         .complete();
 
     let mut config = ClientConfig::new();

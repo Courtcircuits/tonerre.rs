@@ -2,23 +2,22 @@ use std::time::Duration;
 
 use futures::StreamExt;
 use rdkafka::{consumer::{DefaultConsumerContext, MessageStream}, message::BorrowedMessage, ClientConfig, Message};
-use tonerre::{extract::Raw, picker, subscriber::Subscriber, topic_handler::{handler, BoxedNext, SharedHandler}};
+use tonerre::{extract::Raw, picker, subscriber::Subscriber, topic_handler::{handler, BoxedNext}};
 
 
-fn raw_handler(Raw(message): Raw) {
+fn raw_handler(Raw(message): Raw, _state: ()) {
     let as_string = std::str::from_utf8(message.payload().unwrap()).unwrap();
     println!("Your message : {}", as_string);
 }
 
 async fn interval_picker(
     mut stream: MessageStream<'_, DefaultConsumerContext>,
-    next: BoxedNext,
-    handlers: Vec<SharedHandler>,
+    next: BoxedNext
 ) -> Result<(), rdkafka::error::KafkaError> {
     while let Some(message) = stream.next().await {
         let message = message?;
 
-        next(BorrowedMessage::detach(&message), handlers.clone()).await;
+        next(BorrowedMessage::detach(&message)).await;
 
         tokio::time::sleep(Duration::from_millis(5000)).await;
     }
@@ -27,7 +26,7 @@ async fn interval_picker(
 
 #[tokio::main]
 async fn main() {
-    let subscriber = Subscriber::new()
+    let subscriber = Subscriber::new(())
         .subscribe_with_picker("topic1", vec![handler(raw_handler)], picker!(interval_picker))
         .complete();
 
