@@ -36,6 +36,11 @@ jobs:
         # For pull_request events, this checks out the PR branch
         # For pull_request_target, we need to specify the PR ref
         ref: ${{ github.event.pull_request.head.sha }}
+
+    - name: Setup Librdkafka
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y librdkafka-dev
         
     - name: Setup Rust toolchain
       uses: actions-rs/toolchain@v1
@@ -147,6 +152,11 @@ jobs:
         override: true
         components: llvm-tools-preview
         
+    - name: Setup Librdkafka
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y librdkafka-dev
+
     - name: Install cargo-llvm-cov
       run: cargo install cargo-llvm-cov
       
