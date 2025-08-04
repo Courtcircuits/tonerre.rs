@@ -1,0 +1,24 @@
+# CODEOWNERS file
+# This file defines code ownership for the repository
+# Lines starting with # are comments
+# Each line is a file pattern followed by one or more owners
+
+# Global fallback - you own everything by default
+* @Courtcircuits
+
+# Cargo.toml files - strict ownership for package manifests
+# This ensures only you can modify version numbers, dependencies, and package metadata
+**/Cargo.toml @Courtcircuits
+Cargo.toml @Courtcircuits
+
+# Additional protection for Cargo.lock files (dependency lockfiles)
+**/Cargo.lock @Courtcircuits
+Cargo.lock @Courtcircuits
+
+# GitHub workflows and repository configuration (optional but recommended)
+.github/ @Courtcircuits
+.gitignore @Courtcircuits
+
+# License and documentation (optional)
+LICENSE @Courtcircuits
+README.md @Courtcircuits
