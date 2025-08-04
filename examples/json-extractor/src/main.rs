@@ -22,7 +22,6 @@ fn handler_2(Json(message): Json<Bike>) {
     println!("handler_2: {}", message.color);
 }
 
-
 #[tokio::main]
 async fn main() {
     let subscriber = Subscriber::new()

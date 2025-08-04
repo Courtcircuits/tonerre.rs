@@ -8,7 +8,6 @@ use rdkafka::consumer::{DefaultConsumerContext, MessageStream};
 
 use rdkafka::{consumer::Consumer as RDKafkaConsumer, consumer::StreamConsumer};
 
-
 use crate::extract::FromMessage;
 
 pub type SharedHandler =
@@ -50,8 +49,7 @@ where
         Box::pin(async move {
             match T::from_request(message).await {
                 Ok(data) => f(data),
-                Err(_) => {
-                }
+                Err(_) => {}
             }
         })
     })

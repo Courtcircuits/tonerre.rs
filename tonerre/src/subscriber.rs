@@ -28,8 +28,16 @@ impl Subscriber {
         self
     }
 
-    pub fn subscribe_with_picker(&mut self, topic: &str, handlers: Vec<SharedHandler>, picker: Picker) -> &mut Self {
-        self.handlers.insert(topic.to_string(), TopicHandler::new(handlers, Some(Arc::new(picker))));
+    pub fn subscribe_with_picker(
+        &mut self,
+        topic: &str,
+        handlers: Vec<SharedHandler>,
+        picker: Picker,
+    ) -> &mut Self {
+        self.handlers.insert(
+            topic.to_string(),
+            TopicHandler::new(handlers, Some(Arc::new(picker))),
+        );
         self
     }
 
@@ -64,8 +72,7 @@ impl InnerSubscriber {
 
         match try_join_all(handles).await {
             Ok(_) => {}
-            Err(_) => {
-            }
+            Err(_) => {}
         }
         Ok(())
     }

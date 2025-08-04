@@ -1,11 +1,13 @@
-use rdkafka::message::{OwnedMessage, Message};
+use rdkafka::message::{Message, OwnedMessage};
 
 #[cfg(feature = "json_extractor")]
 use serde::de::DeserializeOwned;
 
 pub trait FromMessage: Sized + Clone + Send + Sync {
     type Rejection;
-    fn from_request(message: OwnedMessage) -> impl Future<Output = Result<Self, Self::Rejection>> + Send;
+    fn from_request(
+        message: OwnedMessage,
+    ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send;
 }
 
 #[derive(Debug, Clone)]
@@ -35,7 +37,7 @@ where
     T: DeserializeOwned + Clone + Send + Sync,
 {
     type Rejection = JsonError;
-    async fn from_request(message: OwnedMessage) -> Result<Self, Self::Rejection>  {
+    async fn from_request(message: OwnedMessage) -> Result<Self, Self::Rejection> {
         let bytes = message.payload().unwrap();
 
         match Self::from_bytes(bytes) {
