@@ -1,9 +1,17 @@
 use std::time::Duration;
 
 use futures::StreamExt;
-use rdkafka::{consumer::{DefaultConsumerContext, MessageStream}, message::BorrowedMessage, ClientConfig, Message};
-use tonerre::{extract::Raw, picker, subscriber::Subscriber, topic_handler::{handler, BoxedNext, SharedHandler}};
-
+use rdkafka::{
+    ClientConfig, Message,
+    consumer::{DefaultConsumerContext, MessageStream},
+    message::BorrowedMessage,
+};
+use tonerre::{
+    extract::Raw,
+    picker,
+    subscriber::Subscriber,
+    topic_handler::{BoxedNext, SharedHandler, handler},
+};
 
 fn raw_handler(Raw(message): Raw) {
     let as_string = std::str::from_utf8(message.payload().unwrap()).unwrap();
@@ -28,7 +36,11 @@ async fn interval_picker(
 #[tokio::main]
 async fn main() {
     let subscriber = Subscriber::new()
-        .subscribe_with_picker("topic1", vec![handler(raw_handler)], picker!(interval_picker))
+        .subscribe_with_picker(
+            "topic1",
+            vec![handler(raw_handler)],
+            picker!(interval_picker),
+        )
         .complete();
 
     let mut config = ClientConfig::new();
