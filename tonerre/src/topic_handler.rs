@@ -44,7 +44,7 @@ pub fn handler<F, T, Fut>(f: F) -> SharedHandler
 where
     T: FromMessage + Send + 'static,
     F: Fn(T) -> Fut + Send + Sync + Copy + 'static,
-    Fut: Future<Output = ()> + Send
+    Fut: Future<Output = ()> + Send,
 {
     Arc::new(move |message: OwnedMessage| {
         Box::pin(async move {
