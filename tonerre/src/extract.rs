@@ -4,7 +4,7 @@ use rdkafka::message::{Message, OwnedMessage};
 use serde::de::DeserializeOwned;
 
 pub trait FromMessage: Sized + Clone + Send + Sync {
-    type Rejection;
+    type Rejection: Send;
     fn from_request(
         message: OwnedMessage,
     ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send;
@@ -28,7 +28,7 @@ pub struct Json<T>(pub T);
 
 #[cfg(feature = "json_extractor")]
 pub enum JsonError {
-    ParseError(Box<dyn std::error::Error>),
+    ParseError,
 }
 
 #[cfg(feature = "json_extractor")]
@@ -42,7 +42,7 @@ where
 
         match Self::from_bytes(bytes) {
             Ok(data) => Ok(data),
-            Err(e) => Err(JsonError::ParseError(e)),
+            Err(_) => Err(JsonError::ParseError),
         }
     }
 }

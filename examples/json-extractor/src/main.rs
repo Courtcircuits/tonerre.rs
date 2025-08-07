@@ -13,11 +13,11 @@ struct Bike {
     color: String,
 }
 
-fn handler_1(Json(message): Json<User>) {
+async fn handler_1(Json(message): Json<User>) {
     println!("handler_1: {}", message.name);
 }
 
-fn handler_2(Json(message): Json<Bike>) {
+async fn handler_2(Json(message): Json<Bike>) {
     println!("handler_2: {}", message.wheels);
     println!("handler_2: {}", message.color);
 }
