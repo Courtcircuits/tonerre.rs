@@ -13,7 +13,7 @@ use tonerre::{
     topic_handler::{BoxedNext, SharedHandler, handler},
 };
 
-fn raw_handler(Raw(message): Raw) {
+async fn raw_handler(Raw(message): Raw) {
     let as_string = std::str::from_utf8(message.payload().unwrap()).unwrap();
     println!("Your message : {}", as_string);
 }

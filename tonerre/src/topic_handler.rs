@@ -40,15 +40,16 @@ macro_rules! picker {
     };
 }
 
-pub fn handler<F, T>(f: F) -> SharedHandler
+pub fn handler<F, T, Fut>(f: F) -> SharedHandler
 where
     T: FromMessage + Send + 'static,
-    F: Fn(T) + Send + Sync + Copy + 'static,
+    F: Fn(T) -> Fut + Send + Sync + Copy + 'static,
+    Fut: Future<Output = ()> + Send
 {
     Arc::new(move |message: OwnedMessage| {
         Box::pin(async move {
             if let Ok(data) = T::from_request(message).await {
-                f(data)
+                f(data).await
             }
         })
     })

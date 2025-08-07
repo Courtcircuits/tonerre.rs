@@ -1,7 +1,7 @@
 use rdkafka::{ClientConfig, Message};
 use tonerre::{extract::Raw, subscriber::Subscriber, topic_handler::handler};
 
-fn raw_handler(Raw(message): Raw) {
+async fn raw_handler(Raw(message): Raw) {
     let as_string = std::str::from_utf8(message.payload().unwrap()).unwrap();
     println!("Your message : {}", as_string);
 }
